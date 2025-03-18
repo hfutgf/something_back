@@ -20,7 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prepare": "husky install",
     "db:migrate": "npx prisma migrate dev --name init",
-    "db:push": "npx prisma push",
+    "db:push": "npx prisma db push",
     "db:generate": "npx prisma generate"
   },
   "lint-staged": {
@@ -32,8 +32,10 @@
   "dependencies": {
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
+    "@nestjs/mapped-types": "*",
     "@nestjs/platform-express": "^10.0.0",
     "@prisma/client": "^6.5.0",
+    "class-validator": "^0.14.1",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1"
   },
