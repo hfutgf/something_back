@@ -18,10 +18,12 @@ export class UserService {
     return user;
   }
 
-  async getByEmail(email: string): Promise<User> {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+  async getByGoogleId(googleId: string): Promise<User> {
+    const user = await this.prisma.user.findUnique({ where: { googleId } });
     if (!user)
-      throw new NotFoundException(`User with email: <${email}> not found`);
+      throw new NotFoundException(
+        `User with google id: <${googleId}> not found`,
+      );
     return user;
   }
 
