@@ -14,6 +14,7 @@ import { CreateUserDto } from '../user/dto/create-user.dto';
 import { UserResponseDto } from '../user/dto/response-user.dto';
 import { AuthService } from './auth.service';
 import { CredentialLoginDto } from './dto/credential-login.dto';
+import { GoogleAuthDto } from './dto/google-auth.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -56,7 +57,8 @@ export class AuthController {
     @Body() dto: CredentialLoginDto,
   ): Promise<{ user: User; accessToken: string }> {
     try {
-      return await this.authService.loginCredential(dto);
+      const user = await this.authService.loginCredential(dto);
+      return user;
     } catch (error) {
       throw error;
     }
@@ -71,7 +73,7 @@ export class AuthController {
     schema: { example: { user: UserResponseDto, accessToken: 'token' } },
   })
   async googleAuth(
-    @Body() dto: CreateUserDto,
+    @Body() dto: GoogleAuthDto,
   ): Promise<{ user: User; accessToken: string }> {
     try {
       return await this.authService.googleAuth(dto);

@@ -11,6 +11,7 @@ import * as argon2 from 'argon2';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { UserService } from '../user/user.service';
 import { CredentialLoginDto } from './dto/credential-login.dto';
+import { GoogleAuthDto } from './dto/google-auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -38,10 +39,9 @@ export class AuthService {
   }
 
   async googleAuth(
-    dto: CreateUserDto,
+    dto: GoogleAuthDto,
   ): Promise<{ user: User; accessToken: string }> {
     let user = await this.user.getByGoogleId(dto.googleId);
-
     if (!user) {
       user = await this.user.createUser(dto);
     }
@@ -59,11 +59,11 @@ export class AuthService {
   ): Promise<{ user: User; accessToken: string }> {
     const user = await this.user.getUserByUsername(dto.username);
 
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) throw new NotFoundException(`Username or password is wrong!`);
 
     const isPasswordValid = await argon2.verify(user.password, dto.password);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Username or password is wrong!');
     }
 
     const accessToken = await this.jwt.signAsync(
