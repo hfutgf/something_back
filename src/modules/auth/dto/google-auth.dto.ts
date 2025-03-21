@@ -1,6 +1,6 @@
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString } from 'class-validator';
 
-export class CreateUserDto {
+export class GoogleAuthDto {
   @IsOptional()
   @IsString({ message: 'Google ID must be a string' })
   googleId?: string;
@@ -8,15 +8,6 @@ export class CreateUserDto {
   @IsOptional()
   @IsEmail({}, { message: 'Invalid email format' })
   email?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Username must be a string' })
-  username?: string;
-
-  @IsString({ message: 'Password is required' })
-  @MinLength(6, { message: 'Password must be at least 6 characters long' })
-  @IsOptional()
-  password?: string;
 
   @IsOptional()
   @IsString({ message: 'First name is required' })
