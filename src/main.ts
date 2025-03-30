@@ -38,7 +38,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  const port = process.env.PORT;
+  const port = process.env.PORT || 3001;
   await app.listen(port);
 
   // eslint-disable-next-line no-console

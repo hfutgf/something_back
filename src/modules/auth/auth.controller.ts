@@ -7,7 +7,7 @@ import {
   Post,
   UseInterceptors,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { User } from '@prisma/client';
 
 import { CreateUserDto } from '../user/dto/create-user.dto';
@@ -25,6 +25,17 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'User registration' })
+  @ApiBody({
+    schema: {
+      example: {
+        username: 'username',
+        password: 'password123',
+        firstName: 'first_name',
+        lastName: 'last_name',
+        birthday: new Date(),
+      },
+    },
+  })
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'User created successfully',
@@ -45,6 +56,9 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'User login' })
+  @ApiBody({
+    schema: { example: { username: 'username', password: 'password123' } },
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     schema: { example: { user: UserResponseDto, accessToken: 'token' } },

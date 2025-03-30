@@ -23,6 +23,43 @@ model User {
   birthday  DateTime?
   avatar    String?
 
+  videos    Video[]
+  histories History[]
+
   @@index([email, username])
   @@map("users")
+}
+
+model Video {
+  id        String   @id @unique @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  title       String
+  description String
+  views       Int    @default(0)
+  cover       String
+  link        String
+
+  user    User      @relation(fields: [userId], references: [id])
+  userId  String
+  History History[]
+
+  @@index([title])
+  @@map("videos")
+}
+
+model History {
+  id        String   @id @unique @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  video   Video  @relation(fields: [videoId], references: [id])
+  videoId String
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  @@index([userId])
+  @@map("histories")
 }
