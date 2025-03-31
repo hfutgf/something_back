@@ -3,10 +3,12 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   NotFoundException,
   Param,
   Post,
   Put,
+  Query,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
@@ -18,10 +20,11 @@ import {
   ApiConsumes,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { User } from '@prisma/client';
+import { User, Video } from '@prisma/client';
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -32,6 +35,7 @@ import {
   UpdateOtherDto,
   UpdateVideoDto,
 } from './dto/update-video.dto';
+import { VideoResponseDto } from './dto/video-response.dto';
 import { fileUtils } from './utils/check-file-type';
 import { VideoService } from './video.service';
 
@@ -42,6 +46,85 @@ export class VideoController {
 
   private get baseUrl() {
     return process.env.SERVER_URL;
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get video by ID' })
+  @ApiParam({ name: 'id', type: String, description: 'Video ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Video found',
+    type: VideoResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Video not found' })
+  @ApiResponse({ status: 400, description: 'Invalid ID' })
+  async getOneVideo(@Param('id') videoId: string): Promise<Video> {
+    return this.videoService.getOneVideo(videoId);
+  }
+
+  @Get('user/:userId')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get videos by user ID' })
+  @ApiParam({ name: 'userId', type: String, description: 'User ID' })
+  @ApiQuery({
+    name: 'skip',
+    type: Number,
+    required: false,
+    description: 'Pagination offset',
+  })
+  @ApiQuery({
+    name: 'take',
+    type: Number,
+    required: false,
+    description: 'Items per page (default: 20)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of videos',
+    type: [VideoResponseDto],
+  })
+  @ApiResponse({ status: 400, description: 'Invalid user ID' })
+  async getByUserId(
+    @Param('userId') userId: string,
+    @Query('skip') skip?: number,
+    @Query('take') take?: number,
+  ): Promise<Video[]> {
+    return this.videoService.getByUserId(userId, { skip, take });
+  }
+
+  @Get('search')
+  @ApiOperation({ summary: 'Search videos by keyword' })
+  @ApiQuery({
+    name: 'query',
+    type: String,
+    required: true,
+    description: 'Search term',
+  })
+  @ApiQuery({
+    name: 'skip',
+    type: Number,
+    required: false,
+    description: 'Pagination offset',
+  })
+  @ApiQuery({
+    name: 'take',
+    type: Number,
+    required: false,
+    description: 'Items per page (default: 20)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of matching videos',
+    type: [VideoResponseDto],
+  })
+  async searchVideo(
+    @Query('query') query: string,
+    @Query('skip') skip?: number,
+    @Query('take') take?: number,
+  ): Promise<Video[]> {
+    if (!query) throw new NotFoundException('Search query is required');
+    return this.videoService.searchVideo(query, { skip, take });
   }
 
   @Post()
