@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import * as fs from 'fs';
 import { diskStorage } from 'multer';
 import * as path from 'path';
-import uuid from 'uuid';
+import * as uuid from 'uuid';
 
 export const fileUtils = {
   storage: (folder: string) =>

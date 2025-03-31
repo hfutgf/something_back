@@ -71,4 +71,28 @@ export class VideoService {
       throw new Error(`Failed to increment video views: ${error.message}`);
     }
   }
+
+  async delete(user: User, videoId: string): Promise<string> {
+    try {
+      const video = await this.prisma.video.findUnique({
+        where: { id: videoId },
+      });
+
+      if (!video) {
+        throw new NotFoundException('Video not found');
+      }
+
+      if (video.userId !== user.id) {
+        throw new ConflictException('You are not the creator of this video');
+      }
+
+      await this.prisma.video.delete({
+        where: { id: videoId },
+      });
+
+      return `Video with ID: ${videoId} removed`;
+    } catch (error) {
+      throw new Error(`Failed to update video: ${error.message}`);
+    }
+  }
 }

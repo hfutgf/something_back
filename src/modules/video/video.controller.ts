@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   NotFoundException,
   Param,
   Post,
@@ -189,5 +190,16 @@ export class VideoController {
       ...dto,
       link: dto.link ?? undefined,
     });
+  }
+
+  @Delete(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Delete a video (creator only)' })
+  @ApiParam({ name: 'id', description: 'Video ID' })
+  @ApiResponse({ status: 200, description: 'Video deleted' })
+  @ApiResponse({ status: 404, description: 'Video not found' })
+  async deleteVideo(@CurrentUser() user: User, @Param('id') videoId: string) {
+    return this.videoService.delete(user, videoId);
   }
 }
