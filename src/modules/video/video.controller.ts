@@ -1,7 +1,11 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  NotFoundException,
+  Param,
   Post,
+  Put,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
@@ -12,17 +16,22 @@ import {
   ApiBody,
   ApiConsumes,
   ApiOperation,
+  ApiParam,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { User } from '@prisma/client';
-import * as fs from 'fs';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { v4 as uuidv4 } from 'uuid';
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateVideoDto } from './dto/create-video.dto';
+import {
+  UpdateOnlyCoverDto,
+  UpdateOnlyVideoDto,
+  UpdateOtherDto,
+  UpdateVideoDto,
+} from './dto/update-video.dto';
+import { fileUtils } from './utils/check-file-type';
 import { VideoService } from './video.service';
 
 @ApiTags('Videos')
@@ -30,15 +39,16 @@ import { VideoService } from './video.service';
 export class VideoController {
   constructor(private videoService: VideoService) {}
 
+  private get baseUrl() {
+    return process.env.SERVER_URL;
+  }
+
   @Post()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Create a new video' })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    description: 'Upload video and cover',
-    type: CreateVideoDto,
-  })
+  @ApiBody({ description: 'Upload video and cover', type: CreateVideoDto })
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -46,19 +56,23 @@ export class VideoController {
         { name: 'cover', maxCount: 1 },
       ],
       {
-        storage: diskStorage({
-          destination: (req, file, cb) => {
-            const folder = file.fieldname === 'video' ? 'videos' : 'covers';
-            const path = `./public/uploads/${folder}`;
-            fs.mkdirSync(path, { recursive: true });
-            cb(null, path);
-          },
-          filename: (req, file, cb) => {
-            const randomName = uuidv4();
-            const ext = extname(file.originalname);
-            cb(null, `${randomName}${ext}`);
-          },
-        }),
+        storage: fileUtils.storage('videos'),
+        fileFilter: (req, file, cb) => {
+          if (file.fieldname === 'video') {
+            return fileUtils.fileFilter({
+              fieldName: 'video',
+              mimeTypes: ['video/mp4', 'video/quicktime'],
+              extensions: ['.mp4', '.mov'],
+            })(req, file, cb);
+          } else if (file.fieldname === 'cover') {
+            return fileUtils.fileFilter({
+              fieldName: 'cover',
+              mimeTypes: ['image/jpeg', 'image/png'],
+              extensions: ['.jpg', '.jpeg', '.png'],
+            })(req, file, cb);
+          }
+          cb(new BadRequestException('Invalid field name'), false);
+        },
       },
     ),
   )
@@ -68,24 +82,112 @@ export class VideoController {
     @UploadedFiles()
     files: { video?: Express.Multer.File[]; cover?: Express.Multer.File[] },
   ) {
-    if (!files.video?.length) {
-      throw new Error('Video is required');
-    }
+    if (!files.video?.length)
+      throw new BadRequestException('Video is required');
+    if (!files.cover?.length)
+      throw new BadRequestException('Cover is required');
 
-    if (!files.cover?.length) {
-      throw new Error('Cover image is required');
-    }
-
-    const baseUrl = process.env.SERVER_URL;
-    const videoUrl = `${baseUrl}${files.video[0].path.replace('public', '')}`;
-    const coverUrl = `${baseUrl}${files.cover[0].path.replace('public', '')}`;
-
-    const video = await this.videoService.create(user, {
+    return this.videoService.create(user, {
       ...dto,
-      link: videoUrl,
-      cover: coverUrl,
+      link: fileUtils.generateFileUrl(files.video[0], process.env.SERVER_URL),
+      cover: fileUtils.generateFileUrl(files.cover[0], process.env.SERVER_URL),
     });
+  }
 
-    return video;
+  @Put(':id/video')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update video file (creator only)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ description: 'Upload video', type: UpdateOnlyVideoDto })
+  @ApiParam({ name: 'id', description: 'Video ID' })
+  @UseInterceptors(
+    FileFieldsInterceptor([{ name: 'video', maxCount: 1 }], {
+      storage: fileUtils.storage('videos'),
+      fileFilter: fileUtils.fileFilter({
+        fieldName: 'video',
+        mimeTypes: ['video/mp4', 'video/quicktime', 'video/x-msvideo'],
+        extensions: ['.mp4', '.mov', '.avi'],
+      }),
+    }),
+  )
+  async updateVideoFile(
+    @CurrentUser() user: User,
+    @Param('id') videoId: string,
+    @UploadedFiles() files: { video?: Express.Multer.File[] },
+  ) {
+    if (!files.video?.[0]) {
+      throw new BadRequestException('Video file is required');
+    }
+
+    return this.videoService.updateFromCreator(user, videoId, {
+      link: fileUtils.generateFileUrl(files.video[0], process.env.SERVER_URL),
+    });
+  }
+
+  @Put(':id/cover')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update video cover image (creator only)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ description: 'Upload cover', type: UpdateOnlyCoverDto })
+  @ApiParam({ name: 'id', description: 'Video ID' })
+  @UseInterceptors(
+    FileFieldsInterceptor([{ name: 'cover', maxCount: 1 }], {
+      storage: fileUtils.storage('covers'),
+      fileFilter: fileUtils.fileFilter({
+        fieldName: 'cover',
+        mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+        extensions: ['.jpg', '.jpeg', '.png', '.webp'],
+      }),
+    }),
+  )
+  async updateCover(
+    @CurrentUser() user: User,
+    @Param('id') videoId: string,
+    @UploadedFiles() files: { cover?: Express.Multer.File[] },
+  ) {
+    if (!files.cover?.[0]) {
+      throw new BadRequestException('Cover image is required');
+    }
+
+    return this.videoService.updateFromCreator(user, videoId, {
+      cover: fileUtils.generateFileUrl(files.cover[0], process.env.SERVER_URL),
+    });
+  }
+
+  @Put(':id/views')
+  @ApiOperation({ summary: 'Increment video view count' })
+  @ApiParam({ name: 'id', description: 'Video ID' })
+  @ApiResponse({ status: 200, description: 'View count incremented' })
+  @ApiResponse({ status: 404, description: 'Video not found' })
+  async incrementViews(@Param('id') videoId: string) {
+    const updatedVideo = await this.videoService.updateFromViewer(videoId);
+    if (!updatedVideo) {
+      throw new NotFoundException('Видео не найдено');
+    }
+    return updatedVideo;
+  }
+
+  @Put(':id/other')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update video title and description' })
+  @ApiParam({ name: 'id', description: 'Video ID' })
+  @ApiBody({
+    description: 'Update title and desc',
+    type: UpdateOtherDto,
+  })
+  @ApiResponse({ status: 200, description: 'Video updated' })
+  @ApiResponse({ status: 404, description: 'Video not found' })
+  async otherUpdate(
+    @CurrentUser() user: User,
+    @Param('id') videoId: string,
+    @Body() dto: Omit<UpdateVideoDto, 'video'> & { link?: string },
+  ) {
+    return this.videoService.updateFromCreator(user, videoId, {
+      ...dto,
+      link: dto.link ?? undefined,
+    });
   }
 }
