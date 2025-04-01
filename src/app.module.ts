@@ -4,6 +4,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
 import { AuthModule } from './modules/auth/auth.module';
+import { CommonModule } from './modules/common/common.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { UserModule } from './modules/user/user.module';
 import { VideoModule } from './modules/video/video.module';
@@ -18,6 +19,7 @@ import { VideoModule } from './modules/video/video.module';
     UserModule,
     AuthModule,
     VideoModule,
+    CommonModule,
   ],
 })
 export class AppModule {}
