@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
+import { CommonService } from '../common/common.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserService } from '../user/user.service';
 import { AuthController } from './auth.controller';
@@ -20,7 +21,13 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       }),
     }),
   ],
-  providers: [AuthService, JwtStrategy, UserService, PrismaService],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    UserService,
+    PrismaService,
+    CommonService,
+  ],
   controllers: [AuthController],
   exports: [AuthService],
 })

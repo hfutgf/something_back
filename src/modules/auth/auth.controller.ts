@@ -11,7 +11,7 @@ import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { User } from '@prisma/client';
 
 import { CreateUserDto } from '../user/dto/create-user.dto';
-import { UserResponseDto } from '../user/dto/response-user.dto';
+import { ResponseUserDto } from '../user/dto/response-user.dto';
 import { AuthService } from './auth.service';
 import { CredentialLoginDto } from './dto/credential-login.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
@@ -37,9 +37,8 @@ export class AuthController {
     },
   })
   @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'User created successfully',
-    type: UserResponseDto,
+    status: HttpStatus.OK,
+    schema: { example: { user: ResponseUserDto, accessToken: 'token' } },
   })
   @ApiResponse({
     status: HttpStatus.CONFLICT,
@@ -61,7 +60,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    schema: { example: { user: UserResponseDto, accessToken: 'token' } },
+    schema: { example: { user: ResponseUserDto, accessToken: 'token' } },
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
@@ -84,7 +83,7 @@ export class AuthController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Login via Google successful',
-    schema: { example: { user: UserResponseDto, accessToken: 'token' } },
+    schema: { example: { user: ResponseUserDto, accessToken: 'token' } },
   })
   async googleAuth(
     @Body() dto: GoogleAuthDto,
